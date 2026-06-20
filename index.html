@@ -11,7 +11,12 @@
       <header class="dashboard-header">
         <div>
           <p class="eyebrow">Eurostar Weekend Dashboard</p>
-          <h1>Brussels to Paris returns</h1>
+          <h1 class="route-title" id="route-title">
+            <button class="title-city" id="origin-city" type="button" aria-label="Current first leg starts in Brussels. Click to swap direction.">Brussels</button>
+            <span class="title-word">to</span>
+            <button class="title-city title-city-destination" id="destination-city" type="button" aria-label="Current first leg goes to Paris. Click to swap direction.">Paris</button>
+            <span class="title-word">returns</span>
+          </h1>
         </div>
         <p id="last-updated">Loading prices...</p>
       </header>
@@ -52,6 +57,21 @@
           <input id="local-json-file" type="file" accept="application/json,.json">
         </label>
       </section>
+
+      <details class="calendar-panel" id="calendar-panel">
+        <summary class="calendar-tab">
+          <span class="calendar-tab-title">Price calendar</span>
+          <span class="calendar-tab-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="calendar-body">
+          <div class="calendar-legend" aria-label="Calendar price legend">
+            <span class="legend-badge is-good"><i class="legend-dot"></i>Good</span>
+            <span class="legend-badge is-expensive"><i class="legend-dot"></i>Price warning</span>
+            <span class="legend-badge is-over-maximum"><i class="legend-dot"></i>Over maximum</span>
+          </div>
+          <div class="calendar-years" id="calendar-years"></div>
+        </div>
+      </details>
 
       <section class="journey-grid" id="journey-grid" aria-live="polite"></section>
     </main>

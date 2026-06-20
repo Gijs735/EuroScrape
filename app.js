@@ -3,19 +3,31 @@ const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
 const BRUSSELS_TIME_ZONE = "Europe/Brussels";
 const IS_LOCAL_FILE = window.location.protocol === "file:";
+const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const STATIONS = {
+  brussels: { label: "Brussels", station: BRUSSELS },
+  paris: { label: "Paris", station: PARIS },
+};
 
 const els = {
+  routeTitle: document.querySelector("#route-title"),
+  originCity: document.querySelector("#origin-city"),
+  destinationCity: document.querySelector("#destination-city"),
   lastUpdated: document.querySelector("#last-updated"),
   expensivePrice: document.querySelector("#expensive-price"),
   maximumPrice: document.querySelector("#maximum-price"),
   hideOverMaximum: document.querySelector("#hide-over-maximum"),
   localDataPanel: document.querySelector("#local-data-panel"),
   localJsonFile: document.querySelector("#local-json-file"),
+  calendarYears: document.querySelector("#calendar-years"),
   grid: document.querySelector("#journey-grid"),
   template: document.querySelector("#journey-card-template"),
 };
 
+let allTrains = [];
 let returnJourneys = [];
+let calendarTooltip;
+let selectedOrigin = "brussels";
 
 function ordinal(day) {
   const mod100 = day % 100;
@@ -42,12 +54,6 @@ function dateFromIsoDate(isoDate) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-function addDays(isoDate, days) {
-  const date = dateFromIsoDate(isoDate);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 function formatDate(isoDate) {
   const { year, month, day } = parseDateParts(isoDate);
   const monthName = new Intl.DateTimeFormat("en-GB", {
@@ -56,6 +62,11 @@ function formatDate(isoDate) {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 
   return `${ordinal(day)} of ${monthName} ${year}`;
+}
+
+function formatShortDate(isoDate) {
+  const { year, month, day } = parseDateParts(isoDate);
+  return `${pad(day)}/${pad(month)}/${year}`;
 }
 
 function formatUpdated(isoDateTime) {
@@ -88,12 +99,38 @@ function formatMoney(amount, currency) {
   }).format(amount);
 }
 
-function isOutbound(train) {
-  return train.departure_station === BRUSSELS && train.arrival_station === PARIS;
+function shortMoney(amount, currency) {
+  return formatMoney(amount, currency).replace(" ", "");
 }
 
-function isReturn(train) {
-  return train.departure_station === PARIS && train.arrival_station === BRUSSELS;
+function selectedRoute() {
+  const origin = STATIONS[selectedOrigin];
+  const destinationKey = selectedOrigin === "brussels" ? "paris" : "brussels";
+  const destination = STATIONS[destinationKey];
+  return { origin, destination };
+}
+
+function stationLabel(stationName) {
+  return Object.values(STATIONS).find((city) => city.station === stationName)?.label || stationName;
+}
+
+function weekdayName(isoDate) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(dateFromIsoDate(isoDate));
+}
+
+function formatWeekdayRange(startDate, endDate) {
+  return `${weekdayName(startDate)} to ${weekdayName(endDate)}`;
+}
+
+function routeName(route) {
+  return `${route.origin.label} to ${route.destination.label}`;
+}
+
+function matchesRoute(train, origin, destination) {
+  return train.departure_station === origin.station && train.arrival_station === destination.station;
 }
 
 function cheapestTrain(trains) {
@@ -112,32 +149,52 @@ function groupByDate(trains, predicate) {
   }, new Map());
 }
 
-function buildReturnJourneys(trains) {
-  const outboundByDate = groupByDate(trains, isOutbound);
-  const returnsByDate = groupByDate(trains, isReturn);
+function buildReturnJourneys(trains, route) {
+  const outboundByDate = groupByDate(trains, (train) => matchesRoute(train, route.origin, route.destination));
+  const returnsByDate = groupByDate(trains, (train) => matchesRoute(train, route.destination, route.origin));
+  const outboundDates = [...outboundByDate.keys()].sort();
+  const returnDates = [...returnsByDate.keys()].sort();
+  const journeys = [];
 
-  return [...outboundByDate.keys()]
-    .sort()
-    .map((outboundDate) => {
-      const returnDate = addDays(outboundDate, 2);
-      const outboundOptions = outboundByDate.get(outboundDate);
-      const returnOptions = returnsByDate.get(returnDate);
+  outboundDates.forEach((outboundDate, index) => {
+    const nextOutboundDate = outboundDates[index + 1];
+    const outbound = cheapestTrain(outboundByDate.get(outboundDate));
+    const matchingReturnDates = returnDates.filter((returnDate) => (
+      returnDate > outboundDate && (!nextOutboundDate || returnDate < nextOutboundDate)
+    ));
 
-      if (!outboundOptions || !returnOptions) return null;
-
-      const outbound = cheapestTrain(outboundOptions);
-      const inbound = cheapestTrain(returnOptions);
-
-      return {
+    matchingReturnDates.forEach((returnDate) => {
+      const inbound = cheapestTrain(returnsByDate.get(returnDate));
+      journeys.push({
         outboundDate,
         returnDate,
         outbound,
         inbound,
+        route,
         total: outbound.price + inbound.price,
         currency: outbound.currency || inbound.currency || "EUR",
-      };
-    })
-    .filter(Boolean);
+      });
+    });
+  });
+
+  return journeys.sort((a, b) => {
+    if (a.outboundDate !== b.outboundDate) return a.outboundDate.localeCompare(b.outboundDate);
+    return a.returnDate.localeCompare(b.returnDate);
+  });
+}
+
+function cheapestJourney(journeys) {
+  return [...journeys].sort((a, b) => {
+    if (a.total !== b.total) return a.total - b.total;
+    if (a.returnDate !== b.returnDate) return a.returnDate.localeCompare(b.returnDate);
+    return a.outbound.departure_time.localeCompare(b.outbound.departure_time);
+  })[0];
+}
+
+function addMapItem(map, key, value) {
+  const items = map.get(key) || [];
+  items.push(value);
+  map.set(key, items);
 }
 
 function numericInputValue(input, fallback) {
@@ -159,23 +216,38 @@ function priceStatus(total, settings) {
   return "is-good";
 }
 
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+
+function monthName(year, monthIndex) {
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, monthIndex, 1)));
+}
+
 function renderCard(journey, settings) {
   const fragment = els.template.content.cloneNode(true);
   const card = fragment.querySelector(".journey-card");
+  const routeLabel = fragment.querySelector(".route-label");
   const dates = fragment.querySelector(".travel-dates");
   const departures = fragment.querySelector(".departure-times");
   const total = fragment.querySelector(".total-price");
+  const outboundDestination = stationLabel(journey.outbound.arrival_station);
+  const returnDestination = stationLabel(journey.inbound.arrival_station);
 
+  routeLabel.textContent = formatWeekdayRange(journey.outboundDate, journey.returnDate);
   dates.textContent = `${formatDate(journey.outboundDate)} to ${formatDate(journey.returnDate)}`;
   departures.innerHTML = `
     <span>
-      <strong>To Paris</strong>
+      <strong>To ${outboundDestination}</strong>
       <span class="time-row">
         ${journey.outbound.departure_time}
       </span>
     </span>
     <span>
-      <strong>Back to Brussels</strong>
+      <strong>Back to ${returnDestination}</strong>
       <span class="time-row">
         ${journey.inbound.departure_time}
         <small>arrives ${journey.inbound.arrival_time}</small>
@@ -198,17 +270,138 @@ function visibleJourneys(journeys, settings) {
   return journeys.filter((journey) => journey.total <= settings.maximumPrice);
 }
 
-function renderJourneys() {
+function updateRouteTitle(route) {
+  els.originCity.textContent = route.origin.label;
+  els.destinationCity.textContent = route.destination.label;
+  els.originCity.setAttribute(
+    "aria-label",
+    `Current first leg starts in ${route.origin.label}. Click to swap direction.`
+  );
+  els.destinationCity.setAttribute(
+    "aria-label",
+    `Current first leg goes to ${route.destination.label}. Click to swap direction.`
+  );
+  els.routeTitle.setAttribute("aria-label", `${routeName(route)} returns`);
+  document.title = `${routeName(route)} Weekend Trains`;
+}
+
+function renderJourneys(route) {
   els.grid.replaceChildren();
 
   const settings = filterSettings();
   const journeys = visibleJourneys(returnJourneys, settings);
+  if (!returnJourneys.length) {
+    renderEmptyState(`No ${routeName(route)} return journeys were found in this JSON.`);
+    return;
+  }
+
   if (!journeys.length) {
     renderEmptyState("No return journeys match the current filters.");
     return;
   }
 
   journeys.forEach((journey) => renderCard(journey, settings));
+}
+
+function renderCalendarDay(day, journeys, settings) {
+  const dayElement = document.createElement("span");
+  dayElement.className = "calendar-day";
+  dayElement.textContent = String(day);
+
+  if (!journeys?.length) return dayElement;
+
+  const journey = cheapestJourney(journeys);
+  const price = shortMoney(journey.total, journey.currency);
+  dayElement.classList.add(priceStatus(journey.total, settings));
+  dayElement.innerHTML = `<span class="calendar-date-number">${day}</span>`;
+  dayElement.dataset.tooltipDate = journeys.length === 1
+    ? `${formatShortDate(journey.outboundDate)} to ${formatShortDate(journey.returnDate)}`
+    : formatShortDate(journey.outboundDate);
+  dayElement.dataset.tooltipMeta = journeys.length === 1
+    ? routeName(journey.route)
+    : `${journeys.length} return options`;
+  dayElement.dataset.tooltipPrice = journeys.length === 1
+    ? formatMoney(journey.total, journey.currency)
+    : `cheapest ${formatMoney(journey.total, journey.currency)}`;
+  dayElement.setAttribute("aria-label", `${formatDate(journey.outboundDate)}, ${price}`);
+  dayElement.tabIndex = 0;
+  return dayElement;
+}
+
+function renderCalendarMonth(year, monthIndex, journeysByDate, settings) {
+  const month = document.createElement("section");
+  month.className = "calendar-month";
+  month.innerHTML = `<h4>${monthName(year, monthIndex)}</h4>`;
+
+  const grid = document.createElement("div");
+  grid.className = "calendar-month-grid";
+
+  WEEKDAYS.forEach((weekday) => {
+    const weekdayElement = document.createElement("span");
+    weekdayElement.className = "calendar-weekday";
+    weekdayElement.textContent = weekday;
+    grid.appendChild(weekdayElement);
+  });
+
+  const firstDay = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
+  const mondayOffset = (firstDay + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+
+  for (let index = 0; index < mondayOffset; index += 1) {
+    const spacer = document.createElement("span");
+    spacer.className = "calendar-day is-empty";
+    grid.appendChild(spacer);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const isoDate = `${year}-${pad(monthIndex + 1)}-${pad(day)}`;
+    grid.appendChild(renderCalendarDay(day, journeysByDate.get(isoDate), settings));
+  }
+
+  month.appendChild(grid);
+  return month;
+}
+
+function renderCalendar(route) {
+  els.calendarYears.replaceChildren();
+
+  if (!returnJourneys.length) {
+    const empty = document.createElement("p");
+    empty.className = "calendar-empty";
+    empty.textContent = allTrains.length
+      ? `No ${routeName(route)} pairs to show in the calendar.`
+      : "Load train data to see the calendar.";
+    els.calendarYears.appendChild(empty);
+    return;
+  }
+
+  const settings = filterSettings();
+  const journeysByDate = new Map();
+  returnJourneys.forEach((journey) => addMapItem(journeysByDate, journey.outboundDate, journey));
+  const years = [...new Set(returnJourneys.map((journey) => parseDateParts(journey.outboundDate).year))].sort();
+
+  years.forEach((year) => {
+    const yearElement = document.createElement("section");
+    yearElement.className = "calendar-year";
+    yearElement.innerHTML = `<h3>${year}</h3>`;
+
+    const months = document.createElement("div");
+    months.className = "calendar-months";
+    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+      months.appendChild(renderCalendarMonth(year, monthIndex, journeysByDate, settings));
+    }
+
+    yearElement.appendChild(months);
+    els.calendarYears.appendChild(yearElement);
+  });
+}
+
+function renderDashboard() {
+  const route = selectedRoute();
+  updateRouteTitle(route);
+  returnJourneys = buildReturnJourneys(allTrains, route);
+  renderJourneys(route);
+  renderCalendar(route);
 }
 
 function renderEmptyState(message, className = "empty-state") {
@@ -239,22 +432,66 @@ async function loadPriceData() {
 }
 
 function renderData(data) {
-  returnJourneys = buildReturnJourneys(data.trains || []);
+  allTrains = data.trains || [];
 
   els.lastUpdated.textContent = data.last_updated
     ? formatUpdated(data.last_updated)
     : "Last updated time unavailable";
 
-  if (!returnJourneys.length) {
-    renderEmptyState("No complete Friday to Sunday return journeys were found in the JSON.");
-    return;
-  }
-
-  renderJourneys();
+  renderDashboard();
 }
 
 async function readLocalJson(file) {
   return JSON.parse(await file.text());
+}
+
+function ensureCalendarTooltip() {
+  if (calendarTooltip) return calendarTooltip;
+
+  calendarTooltip = document.createElement("div");
+  calendarTooltip.className = "calendar-tooltip";
+  document.body.appendChild(calendarTooltip);
+  return calendarTooltip;
+}
+
+function showCalendarTooltip(target) {
+  if (!target?.dataset.tooltipPrice) return;
+
+  const tooltip = ensureCalendarTooltip();
+  const rect = target.getBoundingClientRect();
+  tooltip.replaceChildren();
+  [
+    ["calendar-tooltip-date", target.dataset.tooltipDate],
+    ["calendar-tooltip-meta", target.dataset.tooltipMeta],
+    ["calendar-tooltip-price", target.dataset.tooltipPrice],
+  ].forEach(([className, text]) => {
+    const line = document.createElement("span");
+    line.className = className;
+    line.textContent = text;
+    tooltip.appendChild(line);
+  });
+  tooltip.hidden = false;
+
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const top = window.scrollY + rect.top - tooltipRect.height - 10;
+  const preferredLeft = window.scrollX + rect.left + rect.width / 2 - tooltipRect.width / 2;
+  const left = Math.min(
+    Math.max(preferredLeft, window.scrollX + 10),
+    window.scrollX + document.documentElement.clientWidth - tooltipRect.width - 10
+  );
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${Math.max(window.scrollY + 10, top)}px`;
+}
+
+function hideCalendarTooltip() {
+  if (calendarTooltip) calendarTooltip.hidden = true;
+}
+
+function swapRoute() {
+  selectedOrigin = selectedOrigin === "brussels" ? "paris" : "brussels";
+  hideCalendarTooltip();
+  renderDashboard();
 }
 
 async function init() {
@@ -264,6 +501,9 @@ async function init() {
 
     if (!data) {
       els.lastUpdated.textContent = "Local mode";
+      allTrains = [];
+      updateRouteTitle(selectedRoute());
+      renderCalendar(selectedRoute());
       renderEmptyState("Select eurostar_prices.json to load the train data.");
       return;
     }
@@ -275,9 +515,23 @@ async function init() {
   }
 }
 
-els.expensivePrice.addEventListener("input", renderJourneys);
-els.maximumPrice.addEventListener("input", renderJourneys);
-els.hideOverMaximum.addEventListener("change", renderJourneys);
+els.originCity.addEventListener("click", swapRoute);
+els.destinationCity.addEventListener("click", swapRoute);
+els.expensivePrice.addEventListener("input", renderDashboard);
+els.maximumPrice.addEventListener("input", renderDashboard);
+els.hideOverMaximum.addEventListener("change", renderDashboard);
+els.calendarYears.addEventListener("mouseover", (event) => {
+  showCalendarTooltip(event.target.closest(".calendar-day[data-tooltip-price]"));
+});
+els.calendarYears.addEventListener("focusin", (event) => {
+  showCalendarTooltip(event.target.closest(".calendar-day[data-tooltip-price]"));
+});
+els.calendarYears.addEventListener("mouseout", (event) => {
+  const day = event.target.closest(".calendar-day[data-tooltip-price]");
+  if (day && !day.contains(event.relatedTarget)) hideCalendarTooltip();
+});
+els.calendarYears.addEventListener("focusout", hideCalendarTooltip);
+window.addEventListener("scroll", hideCalendarTooltip, { passive: true });
 els.localJsonFile.addEventListener("change", async () => {
   const [file] = els.localJsonFile.files;
   if (!file) return;
