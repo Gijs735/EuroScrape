@@ -38,6 +38,27 @@ PARIS = {
 EUROSTAR_SERVICE_CODES = {"ES", "ER", "TH"}
 STANDARD_CLASS_MARKERS = ("STANDARD", "STD")
 
+# Travel preferences. Change these values when your preferred days or windows change.
+BRUSSELS_TO_PARIS_WEEKDAY = "friday"
+BRUSSELS_TO_PARIS_DEPART_AFTER = "13:00"
+BRUSSELS_TO_PARIS_ARRIVE_BEFORE = "17:45"
+BRUSSELS_TO_PARIS_ARRIVE_INCLUSIVE = False
+
+PARIS_TO_BRUSSELS_WEEKDAY = "sunday"
+PARIS_TO_BRUSSELS_DEPART_AFTER = "18:30"
+PARIS_TO_BRUSSELS_ARRIVE_BEFORE = "22:30"
+PARIS_TO_BRUSSELS_ARRIVE_INCLUSIVE = True
+
+WEEKDAYS = {
+    "monday": 0,
+    "tuesday": 1,
+    "wednesday": 2,
+    "thursday": 3,
+    "friday": 4,
+    "saturday": 5,
+    "sunday": 6,
+}
+
 NEW_BOOKING_SEARCH_QUERY = """
 query NewBookingSearch(
   $origin: String!
@@ -172,24 +193,39 @@ class RouteConfig:
     arrive_inclusive: bool
 
 
+def configured_weekday(name: str) -> int:
+    try:
+        return WEEKDAYS[name.lower()]
+    except KeyError as exc:
+        valid = ", ".join(WEEKDAYS)
+        raise ValueError(f"Unknown weekday {name!r}; expected one of: {valid}") from exc
+
+
+def configured_time(value: str) -> clock_time:
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except ValueError as exc:
+        raise ValueError(f"Invalid time {value!r}; expected HH:MM") from exc
+
+
 ROUTES = (
     RouteConfig(
         key="brussels_to_paris",
         origin=BRUSSELS,
         destination=PARIS,
-        weekday=4,
-        depart_after=clock_time(13, 0),
-        arrive_before=clock_time(17, 45),
-        arrive_inclusive=False,
+        weekday=configured_weekday(BRUSSELS_TO_PARIS_WEEKDAY),
+        depart_after=configured_time(BRUSSELS_TO_PARIS_DEPART_AFTER),
+        arrive_before=configured_time(BRUSSELS_TO_PARIS_ARRIVE_BEFORE),
+        arrive_inclusive=BRUSSELS_TO_PARIS_ARRIVE_INCLUSIVE,
     ),
     RouteConfig(
         key="paris_to_brussels",
         origin=PARIS,
         destination=BRUSSELS,
-        weekday=6,
-        depart_after=clock_time(18, 30),
-        arrive_before=clock_time(22, 30),
-        arrive_inclusive=True,
+        weekday=configured_weekday(PARIS_TO_BRUSSELS_WEEKDAY),
+        depart_after=configured_time(PARIS_TO_BRUSSELS_DEPART_AFTER),
+        arrive_before=configured_time(PARIS_TO_BRUSSELS_ARRIVE_BEFORE),
+        arrive_inclusive=PARIS_TO_BRUSSELS_ARRIVE_INCLUSIVE,
     ),
 )
 
