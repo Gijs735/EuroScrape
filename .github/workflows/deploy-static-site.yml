@@ -1,0 +1,58 @@
+name: Deploy static website
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AZURE_STORAGE_ACCOUNT: eurostartrip
+  DEPLOY_DIR: .deploy
+
+jobs:
+  deploy:
+    name: Deploy to Azure Storage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare website files
+        run: |
+          set -euo pipefail
+          rm -rf "$DEPLOY_DIR"
+          mkdir -p "$DEPLOY_DIR"
+          cp index.html app.js styles.css "$DEPLOY_DIR/"
+
+      - name: Upload to $web container
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az storage blob upload-batch \
+              --account-name "$AZURE_STORAGE_ACCOUNT" \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCESS_KEY }}" \
+              --destination '$web' \
+              --source "$DEPLOY_DIR" \
+              --overwrite true
+
+            az storage blob delete-batch \
+              --account-name "$AZURE_STORAGE_ACCOUNT" \
+              --account-key "${{ secrets.AZURE_STORAGE_ACCESS_KEY }}" \
+              --source '$web' \
+              --pattern 'scripts/*'
+
+            for blob in README.md LICENSE .gitignore; do
+              az storage blob delete \
+                --account-name "$AZURE_STORAGE_ACCOUNT" \
+                --account-key "${{ secrets.AZURE_STORAGE_ACCESS_KEY }}" \
+                --container-name '$web' \
+                --name "$blob" \
+                --only-show-errors || true
+            done
