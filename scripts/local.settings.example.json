@@ -5,6 +5,8 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "WEBSITE_TIME_ZONE": "Romance Standard Time",
     "EUROSTAR_TIMER_SCHEDULE": "0 45 9 * * *",
+    "EUROSTAR_STORAGE_AUTH_MODE": "managed_identity",
+    "EUROSTAR_STORAGE_ACCOUNT_NAME": "eurostartrip",
     "EUROSTAR_STORAGE_CONTAINER": "$web",
     "EUROSTAR_STORAGE_BLOB_NAME": "eurostar_prices.json",
     "EUROSTAR_DAYS_AHEAD": "365",

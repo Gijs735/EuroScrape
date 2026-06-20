@@ -29,6 +29,9 @@ MARKET = "be"
 CURRENCY = "EUR"
 
 TIMER_SCHEDULE = os.getenv("EUROSTAR_TIMER_SCHEDULE", "0 45 9 * * *")
+STORAGE_AUTH_MODE = os.getenv("EUROSTAR_STORAGE_AUTH_MODE", "managed_identity")
+STORAGE_ACCOUNT_URL = os.getenv("EUROSTAR_STORAGE_ACCOUNT_URL")
+STORAGE_ACCOUNT_NAME = os.getenv("EUROSTAR_STORAGE_ACCOUNT_NAME")
 STORAGE_CONNECTION_SETTING = os.getenv("EUROSTAR_STORAGE_CONNECTION_SETTING", "AzureWebJobsStorage")
 STORAGE_CONTAINER = os.getenv("EUROSTAR_STORAGE_CONTAINER", "$web")
 STORAGE_BLOB_NAME = os.getenv("EUROSTAR_STORAGE_BLOB_NAME", "eurostar_prices.json")
@@ -540,14 +543,56 @@ def storage_connection_string() -> str:
     return connection_string
 
 
+def storage_account_url() -> str:
+    if STORAGE_ACCOUNT_URL:
+        return STORAGE_ACCOUNT_URL.rstrip("/")
+    if STORAGE_ACCOUNT_NAME:
+        return f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
+    raise UploadError(
+        "Missing managed identity storage target. Set EUROSTAR_STORAGE_ACCOUNT_URL "
+        "or EUROSTAR_STORAGE_ACCOUNT_NAME."
+    )
+
+
+def managed_identity_credential() -> Any:
+    try:
+        from azure.identity import DefaultAzureCredential
+    except ModuleNotFoundError as exc:
+        raise UploadError("Azure Identity SDK is not installed.") from exc
+
+    client_id = os.getenv("EUROSTAR_MANAGED_IDENTITY_CLIENT_ID")
+    if client_id:
+        return DefaultAzureCredential(managed_identity_client_id=client_id)
+    return DefaultAzureCredential()
+
+
+def blob_service_client() -> Any:
+    try:
+        from azure.storage.blob import BlobServiceClient
+    except ModuleNotFoundError as exc:
+        raise UploadError("Azure Storage SDK is not installed.") from exc
+
+    auth_mode = STORAGE_AUTH_MODE.strip().lower().replace("-", "_")
+    if auth_mode in {"managed_identity", "identity", "default_credential"}:
+        return BlobServiceClient(
+            account_url=storage_account_url(),
+            credential=managed_identity_credential(),
+        )
+    if auth_mode in {"connection_string", "connectionstring"}:
+        return BlobServiceClient.from_connection_string(storage_connection_string())
+    raise UploadError(
+        "Invalid EUROSTAR_STORAGE_AUTH_MODE. Expected managed_identity or connection_string."
+    )
+
+
 def upload_json(payload: dict[str, Any]) -> dict[str, Any]:
     try:
-        from azure.storage.blob import BlobServiceClient, ContentSettings
+        from azure.storage.blob import ContentSettings
     except ModuleNotFoundError as exc:
         raise UploadError("Azure Storage SDK is not installed.") from exc
 
     body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
-    service = BlobServiceClient.from_connection_string(storage_connection_string())
+    service = blob_service_client()
     blob = service.get_blob_client(container=STORAGE_CONTAINER, blob=STORAGE_BLOB_NAME)
     blob.upload_blob(
         body,
