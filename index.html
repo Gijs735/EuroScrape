@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brussels to Paris Weekend Trains</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="dashboard-header">
+        <div>
+          <p class="eyebrow">Eurostar Weekend Dashboard</p>
+          <h1>Brussels to Paris returns</h1>
+        </div>
+        <p id="last-updated">Loading prices...</p>
+      </header>
+
+      <section class="section-header">
+        <h2>Return journeys</h2>
+        <p>Cheapest kept</p>
+      </section>
+
+      <section class="filter-panel" aria-label="Journey filters">
+        <label class="price-input-wrap" for="expensive-price">
+          <span class="filter-title">Price warning:</span>
+          <span class="input-shell input-shell-expensive">
+            <span>€</span>
+            <input id="expensive-price" type="number" min="0" step="1" value="70">
+          </span>
+        </label>
+        <label class="price-input-wrap" for="maximum-price">
+          <span class="filter-title">Maximum price:</span>
+          <span class="input-shell input-shell-maximum">
+            <span>€</span>
+            <input id="maximum-price" type="number" min="0" step="1" value="100">
+          </span>
+        </label>
+        <label class="checkbox-wrap" for="hide-over-maximum">
+          <input id="hide-over-maximum" type="checkbox" checked>
+          <span class="filter-title">Hide above maximum</span>
+        </label>
+      </section>
+
+      <section class="local-data-panel" id="local-data-panel" hidden>
+        <div>
+          <p class="filter-title">Open local data</p>
+          <p>Select the generated <code>eurostar_prices.json</code> file to load this dashboard without a web server.</p>
+        </div>
+        <label class="file-input-wrap" for="local-json-file">
+          Choose JSON
+          <input id="local-json-file" type="file" accept="application/json,.json">
+        </label>
+      </section>
+
+      <section class="journey-grid" id="journey-grid" aria-live="polite"></section>
+    </main>
+
+    <template id="journey-card-template">
+      <article class="journey-card">
+        <div class="journey-card-header">
+          <div>
+            <p class="route-label">Friday to Sunday</p>
+            <h3 class="travel-dates"></h3>
+          </div>
+        </div>
+        <dl class="journey-details">
+          <div>
+            <dt>Departure time</dt>
+            <dd class="departure-times"></dd>
+          </div>
+          <div>
+            <dt>Total price</dt>
+            <dd class="total-price"></dd>
+          </div>
+        </dl>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
