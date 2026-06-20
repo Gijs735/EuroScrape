@@ -19,11 +19,8 @@ from urllib.request import Request, urlopen
 
 try:
     import azure.functions as func
-    from azure.storage.blob import BlobServiceClient, ContentSettings
 except ModuleNotFoundError:
     func = None
-    BlobServiceClient = None
-    ContentSettings = None
 
 
 GATEWAY_URL = "https://site-api.eurostar.com/gateway"
@@ -474,6 +471,40 @@ def extract_trains(payload: dict[str, Any], route: RouteConfig, currency: str) -
     return sorted(trains, key=lambda item: (item.get("date") or "", item.get("departure_time") or ""))
 
 
+def train_identity(train: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        train.get("date"),
+        train.get("departure_station"),
+        train.get("arrival_station"),
+        train.get("departure_time"),
+        train.get("arrival_time"),
+    )
+
+
+def train_choice_key(train: dict[str, Any]) -> tuple[Decimal, int]:
+    price = as_decimal(train.get("price")) or Decimal("Infinity")
+    class_name = str(train.get("eurostar_class") or "").upper()
+    non_standard_rank = 0 if any(marker in class_name for marker in STANDARD_CLASS_MARKERS) else 1
+    return price, non_standard_rank
+
+
+def deduplicate_trains(trains: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    best_by_train: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for train in trains:
+        identity = train_identity(train)
+        current = best_by_train.get(identity)
+        if current is None or train_choice_key(train) < train_choice_key(current):
+            best_by_train[identity] = train
+    return sorted(
+        best_by_train.values(),
+        key=lambda item: (
+            item.get("date") or "",
+            item.get("departure_station") or "",
+            item.get("departure_time") or "",
+        ),
+    )
+
+
 def fetch_prices(
     *,
     start: date | None = None,
@@ -496,7 +527,7 @@ def fetch_prices(
 
     return {
         "last_updated": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "trains": trains,
+        "trains": deduplicate_trains(trains),
     }
 
 
@@ -510,8 +541,10 @@ def storage_connection_string() -> str:
 
 
 def upload_json(payload: dict[str, Any]) -> dict[str, Any]:
-    if BlobServiceClient is None or ContentSettings is None:
-        raise UploadError("Azure Storage SDK is not installed.")
+    try:
+        from azure.storage.blob import BlobServiceClient, ContentSettings
+    except ModuleNotFoundError as exc:
+        raise UploadError("Azure Storage SDK is not installed.") from exc
 
     body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
     service = BlobServiceClient.from_connection_string(storage_connection_string())
@@ -608,9 +641,10 @@ def main() -> int:
     return 0
 
 
-if func is not None:
-    app = func.FunctionApp()
+app = func.FunctionApp() if func is not None else None
 
+
+if app is not None:
     @app.timer_trigger(
         schedule=TIMER_SCHEDULE,
         arg_name="timer",
@@ -652,8 +686,6 @@ if func is not None:
             status_code=200,
             mimetype="application/json",
         )
-else:
-    app = None
 
 
 if __name__ == "__main__":
