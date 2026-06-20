@@ -1,5 +1,5 @@
 const JSON_SOURCES = [
-  { label: "Gijs's schedule", file: "eurostar_prices.json" },
+  { label: "Gijs\'s schedule", file: "eurostar_prices.json" },
 ];
 const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
