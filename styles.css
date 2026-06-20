@@ -94,6 +94,14 @@ h1 {
   font-weight: 800;
 }
 
+.route-subtitle {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
 #last-updated {
   position: absolute;
   top: 18px;
