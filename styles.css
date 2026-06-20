@@ -116,20 +116,6 @@ h1 {
   white-space: nowrap;
 }
 
-.section-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 58px;
-  margin-bottom: 16px;
-  padding: 0 18px 0 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: 0 14px 32px var(--shadow);
-}
-
 .filter-panel {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
@@ -579,28 +565,6 @@ h1 {
   font-size: 0.9rem;
 }
 
-.section-header h2,
-.section-header p {
-  margin: 0;
-}
-
-.section-header h2 {
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.section-header p {
-  padding: 6px 9px;
-  border: 1px solid rgba(242, 196, 109, 0.35);
-  border-radius: 999px;
-  background: rgba(242, 196, 109, 0.06);
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
 .journey-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -763,16 +727,6 @@ dd {
     position: static;
     margin-top: 12px;
     white-space: normal;
-  }
-
-  .section-header {
-    display: block;
-    min-height: 0;
-    padding: 14px 16px;
-  }
-
-  .section-header p {
-    margin-top: 4px;
   }
 
   .filter-panel {
