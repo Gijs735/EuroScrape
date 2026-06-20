@@ -1,4 +1,6 @@
-const JSON_URLS = ["/eurostar_prices.json", "./eurostar_prices.json"];
+const JSON_SOURCES = [
+  { label: "Gijs's schedule", file: "eurostar_prices.json" },
+];
 const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
 const BRUSSELS_TIME_ZONE = "Europe/Brussels";
@@ -13,6 +15,9 @@ const els = {
   routeTitle: document.querySelector("#route-title"),
   originCity: document.querySelector("#origin-city"),
   destinationCity: document.querySelector("#destination-city"),
+  filterPanel: document.querySelector(".filter-panel"),
+  serverDataWrap: document.querySelector("#server-data-wrap"),
+  jsonSource: document.querySelector("#json-source"),
   lastUpdated: document.querySelector("#last-updated"),
   expensivePrice: document.querySelector("#expensive-price"),
   maximumPrice: document.querySelector("#maximum-price"),
@@ -101,6 +106,20 @@ function formatMoney(amount, currency) {
 
 function shortMoney(amount, currency) {
   return formatMoney(amount, currency).replace(" ", "");
+}
+
+function populateJsonSources() {
+  els.jsonSource.replaceChildren();
+  JSON_SOURCES.forEach((source) => {
+    const option = document.createElement("option");
+    option.value = source.file;
+    option.textContent = source.label;
+    els.jsonSource.appendChild(option);
+  });
+}
+
+function selectedJsonFile() {
+  return els.jsonSource.value || JSON_SOURCES[0].file;
 }
 
 function selectedRoute() {
@@ -417,8 +436,9 @@ async function loadPriceData() {
   }
 
   let lastError = null;
+  const jsonFile = selectedJsonFile();
 
-  for (const url of JSON_URLS) {
+  for (const url of [`/${jsonFile}`, `./${jsonFile}`]) {
     try {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) throw new Error(`Could not load ${url}`);
@@ -439,6 +459,20 @@ function renderData(data) {
     : "Last updated time unavailable";
 
   renderDashboard();
+}
+
+async function loadSelectedServerData() {
+  try {
+    els.lastUpdated.textContent = "Loading prices...";
+    renderEmptyState("Loading selected schedule...");
+    renderData(await loadPriceData());
+  } catch (error) {
+    allTrains = [];
+    returnJourneys = [];
+    els.lastUpdated.textContent = "Price data could not be loaded";
+    renderCalendar(selectedRoute());
+    renderEmptyState(error.message, "error-state");
+  }
 }
 
 async function readLocalJson(file) {
@@ -495,8 +529,12 @@ function swapRoute() {
 }
 
 async function init() {
+  populateJsonSources();
+  els.localDataPanel.hidden = !IS_LOCAL_FILE;
+  els.serverDataWrap.hidden = IS_LOCAL_FILE;
+  els.filterPanel.classList.toggle("is-local-file", IS_LOCAL_FILE);
+
   try {
-    els.localDataPanel.hidden = !IS_LOCAL_FILE;
     const data = await loadPriceData();
 
     if (!data) {
@@ -517,6 +555,7 @@ async function init() {
 
 els.originCity.addEventListener("click", swapRoute);
 els.destinationCity.addEventListener("click", swapRoute);
+els.jsonSource.addEventListener("change", loadSelectedServerData);
 els.expensivePrice.addEventListener("input", renderDashboard);
 els.maximumPrice.addEventListener("input", renderDashboard);
 els.hideOverMaximum.addEventListener("change", renderDashboard);
