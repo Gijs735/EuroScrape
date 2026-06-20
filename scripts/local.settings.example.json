@@ -1,16 +1,8 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "<storage-account-connection-string>",
+    "AzureWebJobsStorage__accountName": "eurostartrip",
     "FUNCTIONS_WORKER_RUNTIME": "python",
-    "WEBSITE_TIME_ZONE": "Romance Standard Time",
-    "EUROSTAR_TIMER_SCHEDULE": "0 45 9 * * *",
-    "EUROSTAR_STORAGE_AUTH_MODE": "managed_identity",
-    "EUROSTAR_STORAGE_ACCOUNT_NAME": "eurostartrip",
-    "EUROSTAR_STORAGE_CONTAINER": "$web",
-    "EUROSTAR_STORAGE_BLOB_NAME": "eurostar_prices.json",
-    "EUROSTAR_DAYS_AHEAD": "365",
-    "EUROSTAR_FETCH_SLEEP_SECONDS": "0.25",
-    "EUROSTAR_FETCH_TIMEOUT_SECONDS": "30"
+    "WEBSITE_TIME_ZONE": "Romance Standard Time"
   }
 }

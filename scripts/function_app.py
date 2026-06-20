@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 import uuid
@@ -28,16 +27,16 @@ SITE_API_KEY = "NGktEpCX5R2jYamA9WejQ5b5ryxxUhq51pg7iNXm"
 MARKET = "be"
 CURRENCY = "EUR"
 
-TIMER_SCHEDULE = os.getenv("EUROSTAR_TIMER_SCHEDULE", "0 45 9 * * *")
-STORAGE_AUTH_MODE = os.getenv("EUROSTAR_STORAGE_AUTH_MODE", "managed_identity")
-STORAGE_ACCOUNT_URL = os.getenv("EUROSTAR_STORAGE_ACCOUNT_URL")
-STORAGE_ACCOUNT_NAME = os.getenv("EUROSTAR_STORAGE_ACCOUNT_NAME")
-STORAGE_CONNECTION_SETTING = os.getenv("EUROSTAR_STORAGE_CONNECTION_SETTING", "AzureWebJobsStorage")
-STORAGE_CONTAINER = os.getenv("EUROSTAR_STORAGE_CONTAINER", "$web")
-STORAGE_BLOB_NAME = os.getenv("EUROSTAR_STORAGE_BLOB_NAME", "eurostar_prices.json")
-DEFAULT_DAYS_AHEAD = int(os.getenv("EUROSTAR_DAYS_AHEAD", "365"))
-DEFAULT_SLEEP_SECONDS = float(os.getenv("EUROSTAR_FETCH_SLEEP_SECONDS", "0.25"))
-DEFAULT_TIMEOUT_SECONDS = float(os.getenv("EUROSTAR_FETCH_TIMEOUT_SECONDS", "30"))
+# Azure Function settings. Timer runs at 09:45 in the Function App's configured timezone.
+TIMER_SCHEDULE = "0 45 9 * * *"
+STORAGE_ACCOUNT_NAME = "eurostartrip"
+STORAGE_CONTAINER = "$web"
+STORAGE_BLOB_NAME = "eurostar_prices.json"
+
+# Fetch defaults. CLI flags can override these for local one-off runs.
+DEFAULT_DAYS_AHEAD = 365
+DEFAULT_SLEEP_SECONDS = 0.25
+DEFAULT_TIMEOUT_SECONDS = 30.0
 
 BRUSSELS = {"name": "Brussels-South", "uic": "8814001"}
 PARIS = {"name": "Paris-Nord", "uic": "8727100"}
@@ -49,12 +48,10 @@ STANDARD_CLASS_MARKERS = ("STANDARD", "STD")
 BRUSSELS_TO_PARIS_WEEKDAY = "friday"
 BRUSSELS_TO_PARIS_DEPART_AFTER = "13:00"
 BRUSSELS_TO_PARIS_ARRIVE_BEFORE = "17:45"
-BRUSSELS_TO_PARIS_ARRIVE_INCLUSIVE = False
 
 PARIS_TO_BRUSSELS_WEEKDAY = "sunday"
 PARIS_TO_BRUSSELS_DEPART_AFTER = "18:30"
 PARIS_TO_BRUSSELS_ARRIVE_BEFORE = "22:30"
-PARIS_TO_BRUSSELS_ARRIVE_INCLUSIVE = True
 
 WEEKDAYS = {
     "monday": 0,
@@ -197,7 +194,6 @@ class RouteConfig:
     weekday: int
     depart_after: clock_time
     arrive_before: clock_time
-    arrive_inclusive: bool
 
 
 class EurostarFetchError(RuntimeError):
@@ -231,7 +227,6 @@ ROUTES = (
         weekday=configured_weekday(BRUSSELS_TO_PARIS_WEEKDAY),
         depart_after=configured_time(BRUSSELS_TO_PARIS_DEPART_AFTER),
         arrive_before=configured_time(BRUSSELS_TO_PARIS_ARRIVE_BEFORE),
-        arrive_inclusive=BRUSSELS_TO_PARIS_ARRIVE_INCLUSIVE,
     ),
     RouteConfig(
         key="paris_to_brussels",
@@ -240,7 +235,6 @@ ROUTES = (
         weekday=configured_weekday(PARIS_TO_BRUSSELS_WEEKDAY),
         depart_after=configured_time(PARIS_TO_BRUSSELS_DEPART_AFTER),
         arrive_before=configured_time(PARIS_TO_BRUSSELS_ARRIVE_BEFORE),
-        arrive_inclusive=PARIS_TO_BRUSSELS_ARRIVE_INCLUSIVE,
     ),
 )
 
@@ -422,7 +416,7 @@ def matches_time_window(journey: dict[str, Any], route: RouteConfig) -> bool:
         return False
     if departure <= route.depart_after:
         return False
-    return arrival <= route.arrive_before if route.arrive_inclusive else arrival < route.arrive_before
+    return arrival <= route.arrive_before
 
 
 def is_eurostar_journey(journey: dict[str, Any]) -> bool:
@@ -534,24 +528,8 @@ def fetch_prices(
     }
 
 
-def storage_connection_string() -> str:
-    connection_string = os.getenv(STORAGE_CONNECTION_SETTING)
-    if not connection_string:
-        raise UploadError(
-            f"Missing storage connection string app setting: {STORAGE_CONNECTION_SETTING}"
-        )
-    return connection_string
-
-
 def storage_account_url() -> str:
-    if STORAGE_ACCOUNT_URL:
-        return STORAGE_ACCOUNT_URL.rstrip("/")
-    if STORAGE_ACCOUNT_NAME:
-        return f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
-    raise UploadError(
-        "Missing managed identity storage target. Set EUROSTAR_STORAGE_ACCOUNT_URL "
-        "or EUROSTAR_STORAGE_ACCOUNT_NAME."
-    )
+    return f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net"
 
 
 def managed_identity_credential() -> Any:
@@ -560,9 +538,6 @@ def managed_identity_credential() -> Any:
     except ModuleNotFoundError as exc:
         raise UploadError("Azure Identity SDK is not installed.") from exc
 
-    client_id = os.getenv("EUROSTAR_MANAGED_IDENTITY_CLIENT_ID")
-    if client_id:
-        return DefaultAzureCredential(managed_identity_client_id=client_id)
     return DefaultAzureCredential()
 
 
@@ -572,16 +547,9 @@ def blob_service_client() -> Any:
     except ModuleNotFoundError as exc:
         raise UploadError("Azure Storage SDK is not installed.") from exc
 
-    auth_mode = STORAGE_AUTH_MODE.strip().lower().replace("-", "_")
-    if auth_mode in {"managed_identity", "identity", "default_credential"}:
-        return BlobServiceClient(
-            account_url=storage_account_url(),
-            credential=managed_identity_credential(),
-        )
-    if auth_mode in {"connection_string", "connectionstring"}:
-        return BlobServiceClient.from_connection_string(storage_connection_string())
-    raise UploadError(
-        "Invalid EUROSTAR_STORAGE_AUTH_MODE. Expected managed_identity or connection_string."
+    return BlobServiceClient(
+        account_url=storage_account_url(),
+        credential=managed_identity_credential(),
     )
 
 
