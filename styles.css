@@ -57,6 +57,7 @@ h1 {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.16em;
+  min-height: 1em;
 }
 
 .title-city {
@@ -72,6 +73,7 @@ h1 {
   font-weight: 800;
   letter-spacing: inherit;
   line-height: 0.95;
+  text-align: center;
   transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
@@ -155,37 +157,106 @@ h1 {
   line-height: 1.2;
 }
 
-.select-shell {
-  display: flex;
-  align-items: center;
+.schedule-select {
+  position: relative;
   height: 38px;
-  min-width: 178px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 7px;
-  background: rgba(15, 15, 16, 0.24);
-  color: var(--text);
-  overflow: hidden;
-  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  width: 162px;
+  min-width: 162px;
 }
 
-.select-shell select {
+.schedule-select-button {
+  display: flex;
+  align-items: center;
+  position: relative;
   width: 100%;
   height: 100%;
   padding: 0 32px 0 11px;
-  border: 0;
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: rgba(15, 15, 16, 0.24);
   color: var(--text);
   cursor: pointer;
   font: inherit;
   font-size: 0.94rem;
   font-weight: 700;
-  outline: none;
+  line-height: 1;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.select-shell:focus-within {
+.schedule-select-button::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  pointer-events: none;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.schedule-select-button[aria-expanded="true"] {
   border-color: rgba(242, 196, 109, 0.46);
   background: rgba(15, 15, 16, 0.34);
   box-shadow: 0 0 0 3px rgba(242, 196, 109, 0.12);
+}
+
+.schedule-select-button[aria-expanded="true"]::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.schedule-select-button:focus-visible {
+  border-color: rgba(242, 196, 109, 0.46);
+  box-shadow: 0 0 0 3px rgba(242, 196, 109, 0.12);
+  outline: none;
+}
+
+.schedule-select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 100%;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(36, 37, 38, 0.98);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.36);
+}
+
+.schedule-select-menu[hidden] {
+  display: none;
+}
+
+.schedule-option {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.schedule-option:hover,
+.schedule-option:focus-visible,
+.schedule-option.is-selected {
+  border-color: rgba(242, 196, 109, 0.24);
+  background: rgba(242, 196, 109, 0.08);
+  color: var(--accent);
+  outline: none;
+}
+
+.filter-panel:not(.is-local-file) .checkbox-wrap {
+  grid-column: 4;
+  justify-self: end;
 }
 
 .input-shell {
@@ -750,7 +821,7 @@ dd {
 @media (max-width: 720px) {
   .dashboard {
     width: min(100% - 24px, 520px);
-    padding: 28px 0;
+    padding: 42px 0 28px;
   }
 
   .dashboard-header {
@@ -762,12 +833,23 @@ dd {
   }
 
   h1 {
-    max-width: 8em;
+    max-width: none;
+  }
+
+  .route-title {
+    min-height: 2em;
   }
 
   #last-updated {
-    position: static;
-    margin-top: 12px;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    max-width: 48vw;
+    margin: 0;
+    font-size: 0.58rem;
+    line-height: 1.2;
+    opacity: 0.74;
+    text-align: right;
     white-space: normal;
   }
 
@@ -783,13 +865,15 @@ dd {
     gap: 9px;
   }
 
-  .select-shell,
+  .schedule-select,
   .input-shell {
     width: 100%;
     min-width: 0;
   }
 
   .checkbox-wrap {
+    grid-column: auto;
+    justify-self: auto;
     white-space: normal;
   }
 

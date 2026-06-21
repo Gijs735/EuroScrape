@@ -23,12 +23,15 @@
       </header>
 
       <section class="filter-panel" aria-label="Journey filters">
-        <label class="data-select-wrap" id="server-data-wrap" for="json-source">
+        <div class="data-select-wrap" id="server-data-wrap">
           <span class="filter-title">Schedule:</span>
-          <span class="select-shell">
-            <select id="json-source"></select>
-          </span>
-        </label>
+          <div class="schedule-select" id="json-source">
+            <button class="schedule-select-button" id="json-source-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="json-source-label">Gijs's schedule</span>
+            </button>
+            <div class="schedule-select-menu" id="json-source-menu" role="listbox" hidden></div>
+          </div>
+        </div>
         <label class="price-input-wrap" for="expensive-price">
           <span class="filter-title">Price warning:</span>
           <span class="input-shell input-shell-expensive">

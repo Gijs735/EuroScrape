@@ -1,5 +1,5 @@
 const JSON_SOURCES = [
-  { label: "Gijs\'s schedule", file: "eurostar_prices.json" },
+  { label: "Gijs's schedule", file: "eurostar_prices.json" },
 ];
 const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
@@ -17,7 +17,9 @@ const els = {
   destinationCity: document.querySelector("#destination-city"),
   filterPanel: document.querySelector(".filter-panel"),
   serverDataWrap: document.querySelector("#server-data-wrap"),
-  jsonSource: document.querySelector("#json-source"),
+  jsonSourceButton: document.querySelector("#json-source-button"),
+  jsonSourceLabel: document.querySelector("#json-source-label"),
+  jsonSourceMenu: document.querySelector("#json-source-menu"),
   lastUpdated: document.querySelector("#last-updated"),
   expensivePrice: document.querySelector("#expensive-price"),
   maximumPrice: document.querySelector("#maximum-price"),
@@ -33,6 +35,7 @@ let allTrains = [];
 let returnJourneys = [];
 let calendarTooltip;
 let selectedOrigin = "brussels";
+let selectedJsonFileName = JSON_SOURCES[0].file;
 
 function ordinal(day) {
   const mod100 = day % 100;
@@ -109,17 +112,37 @@ function shortMoney(amount, currency) {
 }
 
 function populateJsonSources() {
-  els.jsonSource.replaceChildren();
+  els.jsonSourceMenu.replaceChildren();
   JSON_SOURCES.forEach((source) => {
-    const option = document.createElement("option");
-    option.value = source.file;
+    const option = document.createElement("button");
+    option.className = "schedule-option";
+    option.type = "button";
+    option.role = "option";
+    option.dataset.file = source.file;
     option.textContent = source.label;
-    els.jsonSource.appendChild(option);
+    option.setAttribute("aria-selected", source.file === selectedJsonFileName ? "true" : "false");
+    option.classList.toggle("is-selected", source.file === selectedJsonFileName);
+    els.jsonSourceMenu.appendChild(option);
   });
+  updateJsonSourceLabel();
 }
 
 function selectedJsonFile() {
-  return els.jsonSource.value || JSON_SOURCES[0].file;
+  return selectedJsonFileName;
+}
+
+function updateJsonSourceLabel() {
+  const selected = JSON_SOURCES.find((source) => source.file === selectedJsonFileName) || JSON_SOURCES[0];
+  els.jsonSourceLabel.textContent = selected.label;
+}
+
+function setScheduleMenuOpen(open) {
+  els.jsonSourceButton.setAttribute("aria-expanded", String(open));
+  els.jsonSourceMenu.hidden = !open;
+}
+
+function toggleScheduleMenu() {
+  setScheduleMenuOpen(els.jsonSourceButton.getAttribute("aria-expanded") !== "true");
 }
 
 function selectedRoute() {
@@ -528,6 +551,19 @@ function swapRoute() {
   renderDashboard();
 }
 
+async function selectJsonSource(option) {
+  const file = option?.dataset.file;
+  if (!file || file === selectedJsonFileName) {
+    setScheduleMenuOpen(false);
+    return;
+  }
+
+  selectedJsonFileName = file;
+  populateJsonSources();
+  setScheduleMenuOpen(false);
+  await loadSelectedServerData();
+}
+
 async function init() {
   populateJsonSources();
   els.localDataPanel.hidden = !IS_LOCAL_FILE;
@@ -555,7 +591,16 @@ async function init() {
 
 els.originCity.addEventListener("click", swapRoute);
 els.destinationCity.addEventListener("click", swapRoute);
-els.jsonSource.addEventListener("change", loadSelectedServerData);
+els.jsonSourceButton.addEventListener("click", toggleScheduleMenu);
+els.jsonSourceMenu.addEventListener("click", (event) => {
+  selectJsonSource(event.target.closest(".schedule-option"));
+});
+document.addEventListener("click", (event) => {
+  if (!els.serverDataWrap.contains(event.target)) setScheduleMenuOpen(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setScheduleMenuOpen(false);
+});
 els.expensivePrice.addEventListener("input", renderDashboard);
 els.maximumPrice.addEventListener("input", renderDashboard);
 els.hideOverMaximum.addEventListener("change", renderDashboard);
