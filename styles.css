@@ -862,6 +862,10 @@ dd {
     min-height: 3.1em;
   }
 
+  .route-title .title-city {
+    justify-self: start;
+  }
+
   #origin-city {
     grid-area: origin;
   }
