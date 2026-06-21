@@ -813,6 +813,13 @@ dd {
   color: var(--red);
 }
 
+.price-breakdown {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
 .empty-state,
 .error-state {
   margin: 0;

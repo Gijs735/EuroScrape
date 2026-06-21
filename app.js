@@ -5,6 +5,8 @@ const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
 const BRUSSELS_TIME_ZONE = "Europe/Brussels";
 const IS_LOCAL_FILE = window.location.protocol === "file:";
+const SETTINGS_CACHE_KEY = "eurostar-dashboard-settings";
+const SETTINGS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const STATIONS = {
   brussels: { label: "Brussels", station: BRUSSELS },
@@ -36,6 +38,69 @@ let returnJourneys = [];
 let calendarTooltip;
 let selectedOrigin = "brussels";
 let selectedJsonFileName = JSON_SOURCES[0].file;
+
+function removeCachedSettings() {
+  try {
+    localStorage.removeItem(SETTINGS_CACHE_KEY);
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+function readCachedSettings() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SETTINGS_CACHE_KEY));
+    if (!cached || cached.expiresAt <= Date.now()) {
+      removeCachedSettings();
+      return null;
+    }
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedSettings() {
+  try {
+    localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({
+      expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS,
+      selectedOrigin,
+      selectedJsonFileName,
+      expensivePrice: els.expensivePrice.value,
+      maximumPrice: els.maximumPrice.value,
+      hideOverMaximum: els.hideOverMaximum.checked,
+    }));
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+function restoreCachedSettings() {
+  const cached = readCachedSettings();
+  if (!cached) return;
+
+  if (Object.prototype.hasOwnProperty.call(STATIONS, cached.selectedOrigin)) {
+    selectedOrigin = cached.selectedOrigin;
+  }
+
+  if (JSON_SOURCES.some((source) => source.file === cached.selectedJsonFileName)) {
+    selectedJsonFileName = cached.selectedJsonFileName;
+  }
+
+  if (Number.isFinite(Number(cached.expensivePrice))) {
+    els.expensivePrice.value = cached.expensivePrice;
+  }
+
+  if (Number.isFinite(Number(cached.maximumPrice))) {
+    els.maximumPrice.value = cached.maximumPrice;
+  }
+
+  if (typeof cached.hideOverMaximum === "boolean") {
+    els.hideOverMaximum.checked = cached.hideOverMaximum;
+  }
+
+  saveCachedSettings();
+}
 
 function ordinal(day) {
   const mod100 = day % 100;
@@ -276,8 +341,11 @@ function renderCard(journey, settings) {
   const dates = fragment.querySelector(".travel-dates");
   const departures = fragment.querySelector(".departure-times");
   const total = fragment.querySelector(".total-price");
+  const priceBreakdown = fragment.querySelector(".price-breakdown");
   const outboundDestination = stationLabel(journey.outbound.arrival_station);
   const returnDestination = stationLabel(journey.inbound.arrival_station);
+  const outboundDay = weekdayName(journey.outboundDate);
+  const returnDay = weekdayName(journey.returnDate);
 
   routeLabel.textContent = formatWeekdayRange(journey.outboundDate, journey.returnDate);
   dates.textContent = `${formatDate(journey.outboundDate)} to ${formatDate(journey.returnDate)}`;
@@ -286,6 +354,7 @@ function renderCard(journey, settings) {
       <strong>To ${outboundDestination}</strong>
       <span class="time-row">
         ${journey.outbound.departure_time}
+        <small>arrives ${journey.outbound.arrival_time}</small>
       </span>
     </span>
     <span>
@@ -298,6 +367,10 @@ function renderCard(journey, settings) {
   `;
   total.textContent = formatMoney(journey.total, journey.currency);
   total.classList.add(priceStatus(journey.total, settings));
+  priceBreakdown.textContent = [
+    `${outboundDay} ${formatMoney(journey.outbound.price, journey.outbound.currency || journey.currency)}`,
+    `${returnDay} ${formatMoney(journey.inbound.price, journey.inbound.currency || journey.currency)}`,
+  ].join(" + ");
 
   card.setAttribute(
     "aria-label",
@@ -547,6 +620,7 @@ function hideCalendarTooltip() {
 
 function swapRoute() {
   selectedOrigin = selectedOrigin === "brussels" ? "paris" : "brussels";
+  saveCachedSettings();
   hideCalendarTooltip();
   renderDashboard();
 }
@@ -559,12 +633,14 @@ async function selectJsonSource(option) {
   }
 
   selectedJsonFileName = file;
+  saveCachedSettings();
   populateJsonSources();
   setScheduleMenuOpen(false);
   await loadSelectedServerData();
 }
 
 async function init() {
+  restoreCachedSettings();
   populateJsonSources();
   els.localDataPanel.hidden = !IS_LOCAL_FILE;
   els.serverDataWrap.hidden = IS_LOCAL_FILE;
@@ -601,9 +677,18 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") setScheduleMenuOpen(false);
 });
-els.expensivePrice.addEventListener("input", renderDashboard);
-els.maximumPrice.addEventListener("input", renderDashboard);
-els.hideOverMaximum.addEventListener("change", renderDashboard);
+els.expensivePrice.addEventListener("input", () => {
+  saveCachedSettings();
+  renderDashboard();
+});
+els.maximumPrice.addEventListener("input", () => {
+  saveCachedSettings();
+  renderDashboard();
+});
+els.hideOverMaximum.addEventListener("change", () => {
+  saveCachedSettings();
+  renderDashboard();
+});
 els.calendarYears.addEventListener("mouseover", (event) => {
   showCalendarTooltip(event.target.closest(".calendar-day[data-tooltip-price]"));
 });
