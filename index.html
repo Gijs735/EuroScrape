@@ -4,7 +4,51 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Brussels to Paris Weekend Trains</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260621-0320">
+    <style>
+      @media (max-width: 720px) {
+        .route-title {
+          display: grid !important;
+          grid-template-columns: auto auto !important;
+          grid-template-areas:
+            "origin connector"
+            "destination destination"
+            "returns returns" !important;
+          min-height: 3.1em !important;
+        }
+
+        #origin-city {
+          grid-area: origin;
+        }
+
+        #destination-city {
+          grid-area: destination;
+        }
+
+        .route-title .title-word:first-of-type {
+          grid-area: connector;
+        }
+
+        .route-title .title-word:last-child {
+          grid-area: returns;
+        }
+
+        .schedule-select,
+        .schedule-select-button {
+          width: 100% !important;
+          min-width: 100% !important;
+        }
+
+        .data-select-wrap {
+          width: 100% !important;
+        }
+
+        .filter-panel:not(.is-local-file) .checkbox-wrap {
+          grid-column: auto !important;
+          justify-self: auto !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <main class="dashboard">
@@ -29,7 +73,9 @@
             <button class="schedule-select-button" id="json-source-button" type="button" aria-haspopup="listbox" aria-expanded="false">
               <span id="json-source-label">Gijs's schedule</span>
             </button>
-            <div class="schedule-select-menu" id="json-source-menu" role="listbox" hidden></div>
+            <div class="schedule-select-menu" id="json-source-menu" role="listbox" hidden>
+              <button class="schedule-option is-selected" type="button" role="option" data-file="eurostar_prices.json" aria-selected="true">Gijs's schedule</button>
+            </div>
           </div>
         </div>
         <label class="price-input-wrap" for="expensive-price">
@@ -102,6 +148,6 @@
       </article>
     </template>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260621-0320"></script>
   </body>
 </html>

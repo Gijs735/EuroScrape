@@ -162,11 +162,14 @@ h1 {
   height: 38px;
   width: 184px;
   min-width: 184px;
+  flex: 0 0 auto;
 }
 
 .schedule-select-button {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   position: relative;
   width: 100%;
   height: 100%;
@@ -188,6 +191,7 @@ h1 {
   content: "";
   position: absolute;
   right: 12px;
+  flex: 0 0 auto;
   width: 7px;
   height: 7px;
   border-right: 2px solid rgba(228, 230, 235, 0.74);
@@ -195,6 +199,14 @@ h1 {
   pointer-events: none;
   transform: translateY(-2px) rotate(45deg);
   transition: transform 160ms ease;
+}
+
+#json-source-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schedule-select-button[aria-expanded="true"] {
@@ -841,12 +853,13 @@ dd {
     grid-template-columns: auto auto;
     grid-template-areas:
       "origin connector"
-      "destination returns";
+      "destination destination"
+      "returns returns";
     justify-content: start;
     align-items: baseline;
     column-gap: 0.16em;
     row-gap: 0.08em;
-    min-height: 2.1em;
+    min-height: 3.1em;
   }
 
   #origin-city {
@@ -888,14 +901,22 @@ dd {
     align-items: stretch;
     flex-direction: column;
     gap: 9px;
+    width: 100%;
   }
 
   .schedule-select,
   .input-shell {
     width: 100%;
-    min-width: 0;
+    min-width: 100%;
   }
 
+  .schedule-select-button {
+    display: flex;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .filter-panel:not(.is-local-file) .checkbox-wrap,
   .checkbox-wrap {
     grid-column: auto;
     justify-self: auto;
