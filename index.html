@@ -4,8 +4,50 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Brussels to Paris Weekend Trains</title>
-    <link rel="stylesheet" href="styles.css?v=20260621-0325">
+    <link rel="stylesheet" href="styles.css?v=20260621-1058">
     <style>
+      @media (max-width: 1180px) {
+        .filter-panel,
+        .filter-panel.is-local-file {
+          grid-template-columns: 1fr !important;
+          align-items: start !important;
+          gap: 12px !important;
+          padding: 16px !important;
+        }
+
+        .data-select-wrap {
+          grid-column: 1 / -1 !important;
+          align-items: stretch !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+        }
+
+        .schedule-select {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .price-input-wrap {
+          align-items: stretch !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+        }
+
+        .input-shell {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .filter-panel:not(.is-local-file) .checkbox-wrap,
+        .checkbox-wrap {
+          grid-column: 1 / -1 !important;
+          justify-self: stretch !important;
+          justify-content: flex-start !important;
+          min-height: 32px !important;
+          white-space: nowrap !important;
+        }
+      }
+
       @media (max-width: 720px) {
         .route-title {
           display: grid !important;
@@ -45,6 +87,14 @@
 
         .data-select-wrap {
           width: 100% !important;
+          padding-top: 2px !important;
+          padding-bottom: 10px !important;
+        }
+
+        .filter-panel {
+          grid-template-columns: 1fr !important;
+          padding-top: 12px !important;
+          padding-bottom: 12px !important;
         }
 
         .filter-panel:not(.is-local-file) .checkbox-wrap {
@@ -152,6 +202,6 @@
       </article>
     </template>
 
-    <script src="app.js?v=20260621-0325"></script>
+    <script src="app.js?v=20260621-1058"></script>
   </body>
 </html>

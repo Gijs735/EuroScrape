@@ -830,6 +830,48 @@ dd {
   color: var(--red);
 }
 
+@media (max-width: 1180px) {
+  .filter-panel,
+  .filter-panel.is-local-file {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .data-select-wrap {
+    grid-column: 1 / -1;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .schedule-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .price-input-wrap {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .input-shell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-panel:not(.is-local-file) .checkbox-wrap,
+  .checkbox-wrap {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: flex-start;
+    min-height: 32px;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 720px) {
   .dashboard {
     width: min(100% - 24px, 520px);
@@ -897,7 +939,12 @@ dd {
 
   .filter-panel {
     grid-template-columns: 1fr;
-    padding: 0 12px;
+    padding: 12px;
+  }
+
+  .data-select-wrap {
+    padding-top: 2px;
+    padding-bottom: 10px;
   }
 
   .data-select-wrap,
@@ -938,12 +985,6 @@ dd {
 
   .calendar-months {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .data-select-wrap + .price-input-wrap,
-  .price-input-wrap + .price-input-wrap,
-  .price-input-wrap + .checkbox-wrap {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .journey-grid {
