@@ -38,7 +38,7 @@ jobs:
 
       # Optional: Add step to run tests here
       - name: Compile Python files
-        run: python -m py_compile ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/function_app.py
+        run: python -m compileall ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
       - name: Zip artifact for deployment
         working-directory: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}

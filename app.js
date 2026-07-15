@@ -1,5 +1,6 @@
 const JSON_SOURCES = [
-  { label: "Gijs's schedule", file: "eurostar_prices.json" },
+  { file: "eurostar_prices_gijs.json" },
+  { file: "eurostar_prices_wenjie.json" },
 ];
 const BRUSSELS = "Brussels-South";
 const PARIS = "Paris-Nord";
@@ -38,6 +39,18 @@ let returnJourneys = [];
 let calendarTooltip;
 let selectedOrigin = "brussels";
 let selectedJsonFileName = JSON_SOURCES[0].file;
+
+function fallbackScheduleLabel(file) {
+  return file
+    .replace(/^eurostar_prices_?/, "")
+    .replace(/\.json$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || file;
+}
+
+function scheduleLabel(source) {
+  return source.scheduleName || fallbackScheduleLabel(source.file);
+}
 
 function removeCachedSettings() {
   try {
@@ -184,7 +197,7 @@ function populateJsonSources() {
     option.type = "button";
     option.role = "option";
     option.dataset.file = source.file;
-    option.textContent = source.label;
+    option.textContent = scheduleLabel(source);
     option.setAttribute("aria-selected", source.file === selectedJsonFileName ? "true" : "false");
     option.classList.toggle("is-selected", source.file === selectedJsonFileName);
     els.jsonSourceMenu.appendChild(option);
@@ -198,7 +211,7 @@ function selectedJsonFile() {
 
 function updateJsonSourceLabel() {
   const selected = JSON_SOURCES.find((source) => source.file === selectedJsonFileName) || JSON_SOURCES[0];
-  els.jsonSourceLabel.textContent = selected.label;
+  els.jsonSourceLabel.textContent = scheduleLabel(selected);
 }
 
 function setScheduleMenuOpen(open) {
@@ -526,13 +539,8 @@ function renderEmptyState(message, className = "empty-state") {
   els.grid.replaceChildren(state);
 }
 
-async function loadPriceData() {
-  if (IS_LOCAL_FILE) {
-    return null;
-  }
-
+async function fetchJsonFile(jsonFile) {
   let lastError = null;
-  const jsonFile = selectedJsonFile();
 
   for (const url of [`/${jsonFile}`, `./${jsonFile}`]) {
     try {
@@ -544,7 +552,36 @@ async function loadPriceData() {
     }
   }
 
-  throw lastError || new Error("Could not load eurostar_prices.json");
+  throw lastError || new Error(`Could not load ${jsonFile}`);
+}
+
+function updateScheduleName(file, data) {
+  const source = JSON_SOURCES.find((item) => item.file === file);
+  if (!source || !data?.schedule_name) return;
+
+  source.scheduleName = data.schedule_name;
+  populateJsonSources();
+}
+
+async function loadScheduleNames() {
+  if (IS_LOCAL_FILE) return;
+
+  await Promise.all(JSON_SOURCES.map(async (source) => {
+    try {
+      const data = await fetchJsonFile(source.file);
+      updateScheduleName(source.file, data);
+    } catch {
+      populateJsonSources();
+    }
+  }));
+}
+
+async function loadPriceData() {
+  if (IS_LOCAL_FILE) {
+    return null;
+  }
+
+  return fetchJsonFile(selectedJsonFile());
 }
 
 function renderData(data) {
@@ -561,7 +598,9 @@ async function loadSelectedServerData() {
   try {
     els.lastUpdated.textContent = "Loading prices...";
     renderEmptyState("Loading selected schedule...");
-    renderData(await loadPriceData());
+    const data = await loadPriceData();
+    updateScheduleName(selectedJsonFile(), data);
+    renderData(data);
   } catch (error) {
     allTrains = [];
     returnJourneys = [];
@@ -647,7 +686,9 @@ async function init() {
   els.filterPanel.classList.toggle("is-local-file", IS_LOCAL_FILE);
 
   try {
+    await loadScheduleNames();
     const data = await loadPriceData();
+    updateScheduleName(selectedJsonFile(), data);
 
     if (!data) {
       els.lastUpdated.textContent = "Local mode";
