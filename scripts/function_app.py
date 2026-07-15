@@ -17,6 +17,8 @@ except ModuleNotFoundError:
 
 
 app = func.FunctionApp() if func is not None else None
+GIJS_PROFILE = PROFILES["gijs"]
+WENJIE_PROFILE = PROFILES["wenjie"]
 
 
 if app is not None:
@@ -52,39 +54,41 @@ if app is not None:
             mimetype="application/json",
         )
 
+    # To add another profile, add it in config.py, create a PROFILE constant above,
+    # then copy one timer block and one HTTP block below.
     @app.timer_trigger(
-        schedule=PROFILES["gijs"].timer_schedule,
+        schedule=GIJS_PROFILE.timer_schedule,
         arg_name="timer",
         run_on_startup=False,
         use_monitor=True,
     )
     def refresh_gijs_eurostar_prices_timer(timer: func.TimerRequest) -> None:
-        refresh_profile_timer(PROFILES["gijs"], timer)
+        refresh_profile_timer(GIJS_PROFILE, timer)
 
     @app.timer_trigger(
-        schedule=PROFILES["wenjie"].timer_schedule,
+        schedule=WENJIE_PROFILE.timer_schedule,
         arg_name="timer",
         run_on_startup=False,
         use_monitor=True,
     )
     def refresh_wenjie_eurostar_prices_timer(timer: func.TimerRequest) -> None:
-        refresh_profile_timer(PROFILES["wenjie"], timer)
+        refresh_profile_timer(WENJIE_PROFILE, timer)
 
     @app.route(
-        route="refresh-eurostar-prices",
+        route=GIJS_PROFILE.http_route,
         auth_level=func.AuthLevel.FUNCTION,
         methods=["GET", "POST"],
     )
     def refresh_gijs_eurostar_prices_http(req: func.HttpRequest) -> func.HttpResponse:
-        return refresh_profile_http(PROFILES["gijs"])
+        return refresh_profile_http(GIJS_PROFILE)
 
     @app.route(
-        route="refresh-wenjie-eurostar-prices",
+        route=WENJIE_PROFILE.http_route,
         auth_level=func.AuthLevel.FUNCTION,
         methods=["GET", "POST"],
     )
     def refresh_wenjie_eurostar_prices_http(req: func.HttpRequest) -> func.HttpResponse:
-        return refresh_profile_http(PROFILES["wenjie"])
+        return refresh_profile_http(WENJIE_PROFILE)
 
 
 if __name__ == "__main__":

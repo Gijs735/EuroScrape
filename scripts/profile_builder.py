@@ -40,6 +40,7 @@ class FetchProfile:
     schedule_name: str
     blob_name: str
     timer_schedule: str
+    http_route: str
     routes: tuple[RouteConfig, ...]
 
 
@@ -88,6 +89,7 @@ def profile_from_definition(key: str, settings: dict[str, str]) -> FetchProfile:
         schedule_name=settings["schedule_name"],
         blob_name=settings["blob_name"],
         timer_schedule=settings["timer_schedule"],
+        http_route=settings["http_route"],
         routes=(
             route_from_definition(settings, "outbound"),
             route_from_definition(settings, "return"),

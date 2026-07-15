@@ -2,11 +2,14 @@ ROUTE_BRUSSELS_TO_PARIS = "brussels_to_paris"
 ROUTE_PARIS_TO_BRUSSELS = "paris_to_brussels"
 
 # Profile settings. Route values must be ROUTE_BRUSSELS_TO_PARIS or ROUTE_PARIS_TO_BRUSSELS.
+# To add another profile, add it below, create a PROFILE constant in function_app.py, and
+# then copy one timer block and one HTTP block in function_app.py.
 PROFILE_DEFINITIONS = {
     "gijs": {
         "schedule_name": "Gijs's schedule",
         "blob_name": "eurostar_prices_gijs.json",
         "timer_schedule": "0 45 9 * * *",
+        "http_route": "refresh-eurostar-prices",
         "outbound_route": ROUTE_BRUSSELS_TO_PARIS,
         "outbound_weekday": "friday",
         "outbound_depart_after": "13:00",
@@ -20,6 +23,7 @@ PROFILE_DEFINITIONS = {
         "schedule_name": "Wenjie's schedule",
         "blob_name": "eurostar_prices_wenjie.json",
         "timer_schedule": "0 15 10 * * *",
+        "http_route": "refresh-wenjie-eurostar-prices",
         "outbound_route": ROUTE_PARIS_TO_BRUSSELS,
         "outbound_weekday": "friday",
         "outbound_depart_after": "13:00",

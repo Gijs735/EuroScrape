@@ -8,4 +8,4 @@ Static dashboard for Eurostar weekend return trips.
 
 The script asks which profile to fetch.
 
-Edit profiles, routes, times, JSON filenames, and schedules in `scripts/config.py`.
+Edit profiles, routes, times, JSON filenames, schedules, and HTTP routes in `scripts/config.py`.
