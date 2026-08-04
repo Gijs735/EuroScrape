@@ -535,9 +535,9 @@ h1 {
 }
 
 .calendar-day.is-cheapest {
-  background: rgba(21, 128, 61, 0.5);
-  border-color: rgba(34, 197, 94, 0.82);
-  color: #b7f7cd;
+  background: rgba(20, 83, 45, 0.72);
+  border-color: rgba(34, 197, 94, 0.86);
+  color: var(--green);
 }
 
 .calendar-day.is-expensive {
