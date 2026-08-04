@@ -431,7 +431,7 @@ function renderJourneys(route) {
   journeys.forEach((journey) => renderCard(journey, settings));
 }
 
-function renderCalendarDay(day, journeys, settings) {
+function renderCalendarDay(day, journeys, settings, cheapestTotal) {
   const dayElement = document.createElement("span");
   dayElement.className = "calendar-day";
   dayElement.textContent = String(day);
@@ -440,7 +440,11 @@ function renderCalendarDay(day, journeys, settings) {
 
   const journey = cheapestJourney(journeys);
   const price = shortMoney(journey.total, journey.currency);
-  dayElement.classList.add(priceStatus(journey.total, settings));
+  const status = priceStatus(journey.total, settings);
+  dayElement.classList.add(status);
+  if (status === "is-good" && journey.total === cheapestTotal) {
+    dayElement.classList.add("is-cheapest");
+  }
   dayElement.innerHTML = `<span class="calendar-date-number">${day}</span>`;
   dayElement.dataset.tooltipDate = journeys.length === 1
     ? `${formatShortDate(journey.outboundDate)} to ${formatShortDate(journey.returnDate)}`
@@ -456,7 +460,7 @@ function renderCalendarDay(day, journeys, settings) {
   return dayElement;
 }
 
-function renderCalendarMonth(year, monthIndex, journeysByDate, settings) {
+function renderCalendarMonth(year, monthIndex, journeysByDate, settings, cheapestTotal) {
   const month = document.createElement("section");
   month.className = "calendar-month";
   month.innerHTML = `<h4>${monthName(year, monthIndex)}</h4>`;
@@ -483,7 +487,7 @@ function renderCalendarMonth(year, monthIndex, journeysByDate, settings) {
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = `${year}-${pad(monthIndex + 1)}-${pad(day)}`;
-    grid.appendChild(renderCalendarDay(day, journeysByDate.get(isoDate), settings));
+    grid.appendChild(renderCalendarDay(day, journeysByDate.get(isoDate), settings, cheapestTotal));
   }
 
   month.appendChild(grid);
@@ -506,6 +510,7 @@ function renderCalendar(route) {
   const settings = filterSettings();
   const journeysByDate = new Map();
   returnJourneys.forEach((journey) => addMapItem(journeysByDate, journey.outboundDate, journey));
+  const cheapestTotal = Math.min(...returnJourneys.map((journey) => journey.total));
   const years = [...new Set(returnJourneys.map((journey) => parseDateParts(journey.outboundDate).year))].sort();
 
   years.forEach((year) => {
@@ -516,7 +521,7 @@ function renderCalendar(route) {
     const months = document.createElement("div");
     months.className = "calendar-months";
     for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
-      months.appendChild(renderCalendarMonth(year, monthIndex, journeysByDate, settings));
+      months.appendChild(renderCalendarMonth(year, monthIndex, journeysByDate, settings, cheapestTotal));
     }
 
     yearElement.appendChild(months);
